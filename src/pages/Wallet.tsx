@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { pawapayService } from '@/services/pawapay';
 
 const Wallet = () => {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ const Wallet = () => {
   const [balance, setBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState("5");
+  const [phoneNumber, setPhoneNumber] = useState(user?.user_metadata?.phone || "");
   const [isLoading, setIsLoading] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [walletId, setWalletId] = useState<string | null>(null);
@@ -86,19 +88,38 @@ const Wallet = () => {
     } catch (error: any) {
       console.error('Error fetching wallet:', error);
       toast({
-        title: "Erreur",
-        description: "Impossible de charger votre portefeuille",
+        title: "Erreur de chargement",
+        description: error.message.includes('relation "wallets" does not exist')
+          ? "Le système de portefeuille n'est pas encore activé en base de données. Contactez l'admin."
+          : "Impossible de charger votre portefeuille",
         variant: "destructive"
       });
     }
   };
 
   const handleRecharge = async () => {
-    if (!walletId) return;
+    if (!walletId || !user) return;
+
+    if (!phoneNumber || phoneNumber.length < 9) {
+      toast({
+        title: "Numéro invalide",
+        description: "Veuillez entrer un numéro de téléphone valide.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Insert pending transaction
+      // 1. Call real PawaPay API
+      const pawaRes = await pawapayService.initiatePayment(
+        parseFloat(rechargeAmount),
+        phoneNumber,
+        `Recharge GOMACASCADE - ${user.id}`
+      );
+
+      // 2. Insert transaction into our DB
       const { error } = await supabase
         .from('wallet_transactions')
         .insert({
@@ -107,18 +128,18 @@ const Wallet = () => {
           amount: parseFloat(rechargeAmount),
           status: 'pending',
           method: 'PawaPay',
-          description: 'Recharge Portefeuille'
+          description: `PawaPay: ${pawaRes.depositId || 'Recharge'}`
         });
 
       if (error) throw error;
 
       setIsRechargeOpen(false);
       toast({
-        title: "Demande de paiement envoyée",
-        description: `Veuillez confirmer le paiement de ${rechargeAmount}$ sur votre téléphone.`,
+        title: "Paiement initié !",
+        description: `Une demande de ${rechargeAmount}$ a été envoyée au ${phoneNumber}. Validez avec votre code PIN.`,
       });
 
-      // Refresh transactions (it will stay pending until manually or webhook updated)
+      // Refresh transactions
       fetchWalletData();
 
     } catch (error: any) {
@@ -174,6 +195,21 @@ const Wallet = () => {
                       />
                     </div>
                   </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone" className="font-bold">Numéro Mobile Money (Airtel, Vodacom, Orange)</Label>
+                    <div className="relative">
+                      <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="081XXXXXXX"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className="pl-10 rounded-xl border-2 focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-2">
                     {["5", "10", "20"].map((amt) => (
                       <Button
