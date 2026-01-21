@@ -52,14 +52,15 @@ const LiveTV = () => {
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
   const [premiumCategories, setPremiumCategories] = useState<XtreamCategory[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all_streams");
   const [premiumChannels, setPremiumChannels] = useState<XtreamStream[]>([]);
   const [isLoadingPremium, setIsLoadingPremium] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [favorites, setFavorites] = useState<number[]>(() => {
-    const saved = localStorage.getItem('iptv-favorites');
     return saved ? JSON.parse(saved) : [];
   });
+  const [allPremiumChannels, setAllPremiumChannels] = useState<XtreamStream[]>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const channels = [
     { id: 1, name: "France 24", category: "Infos", url: "https://dash4.antik.sk/live/test_france24_france/playlist.m3u8", color: "bg-blue-600", isYoutube: false },
@@ -71,12 +72,19 @@ const LiveTV = () => {
     { id: 7, name: "Arte HD", category: "Culture", url: "https://dash4.antik.sk/live/test_arte_avc_25p/playlist.m3u8", color: "bg-orange-500", isYoutube: false },
     { id: 8, name: "Africa 24 Sport", category: "Sports", url: "https://africa24.vedge.infomaniak.com/livecast/ik:africa24sport/manifest.m3u8", color: "bg-green-600", isYoutube: false },
     { id: 9, name: "FIFA+ French", category: "Sports", url: "https://37b4c228.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmFrdXRlblRWLWZyX0ZJRkFQbHVzRnJlbmNoX0hMUw/playlist.m3u8", color: "bg-red-700", isYoutube: false },
+    { id: 20, name: "Motorvision", category: "Sports", url: "https://motorvision-international-en-rakuten.amagi.tv/playlist.m3u8", color: "bg-gray-700", isYoutube: false },
+    { id: 21, name: "Red Bull TV", category: "Sports", url: "https://rbmn-live.akamaized.net/hls/live/590964/flodotcom/master.m3u8", color: "bg-red-900", isYoutube: false },
     { id: 10, name: "Clubbing TV France", category: "Musique", url: "https://d1j2csarxnwazk.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-uze1m6xh4fiyr-ssai-prd/master.m3u8", color: "bg-purple-600", isYoutube: false },
     { id: 11, name: "DBM TV", category: "Musique", url: "https://dbmtv.vedge.infomaniak.com/livecast/dbmtv/playlist.m3u8", color: "bg-pink-600", isYoutube: false },
     { id: 12, name: "A2i Music", category: "Musique", url: "https://stream.sen-gt.com/A2iMusic/myStream/playlist.m3u8", color: "bg-indigo-600", isYoutube: false },
     { id: 13, name: "Digital Congo TV", category: "Infos", url: "http://51.254.199.122:8080/DigitalCongoTV/index.m3u8", color: "bg-orange-600", isYoutube: false },
     { id: 14, name: "Tele Congo", category: "Général", url: "http://69.64.57.208/telecongo/playlist.m3u8", color: "bg-green-700", isYoutube: false },
     { id: 15, name: "Congo Planet TV", category: "Général", url: "https://radio.congoplanet.com/Congo_Planet_TV.sdp/Congo_Planet_TV/playlist.m3u8", color: "bg-blue-700", isYoutube: false },
+    { id: 22, name: "RTNC (RDC)", category: "Infos", url: "http://51.254.199.122:8080/RTNC/index.m3u8", color: "bg-blue-900", isYoutube: false },
+    { id: 23, name: "B-One TV", category: "Infos", url: "http://51.254.199.122:8080/BONE/index.m3u8", color: "bg-red-800", isYoutube: false },
+    { id: 24, name: "TV5 Monde Info", category: "Infos", url: "https://tv5monde-info.iptv-free.com/playlist.m3u8", color: "bg-cyan-600", isYoutube: false },
+    { id: 25, name: "BFM TV", category: "Infos", url: "https://shls-bfmtv-prod.akamaized.net/out/v1/70997ad92e624869894458f3f899e909/index.m3u8", color: "bg-blue-500", isYoutube: false },
+    { id: 26, name: "CNews", category: "Infos", url: "https://shls-cnews-prod.akamaized.net/out/v1/6765275e77904071855a1d528b7e2832/index.m3u8", color: "bg-gray-800", isYoutube: false },
     { id: 16, name: "Africa 24 English", category: "Infos", url: "https://edge20.vedge.infomaniak.com/livecast/ik:africa24english/manifest.m3u8", color: "bg-yellow-700", isYoutube: false },
     { id: 17, name: "4 Kurd Music", category: "Musique", url: "https://4kuhls.persiana.live/hls/stream.m3u8", color: "bg-red-400", isYoutube: false },
     { id: 18, name: "Al Jazeera English", category: "Infos", url: "https://live-hls-web-aje.getaj.net/AJE/index.m3u8", color: "bg-orange-800", isYoutube: false },
@@ -167,14 +175,19 @@ const LiveTV = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Charger les catégories Premium au démarrage
+  // Charger les catégories Premium et TOUTES les chaînes au démarrage
   useEffect(() => {
     const loadPremiumData = async () => {
       try {
         const categories = await iptvService.getLiveCategories();
-        setPremiumCategories(categories);
+        // Ajouter une catégorie "TOUTES" au début
+        setPremiumCategories([{ category_id: "all_streams", category_name: "Toutes les chaînes", parent_id: 0 }, ...categories]);
+
+        // Charger toutes les chaînes en arrière-plan pour la recherche globale
+        const allStreams = await iptvService.getAllLiveStreams();
+        setAllPremiumChannels(allStreams);
       } catch (err) {
-        console.error("Erreur chargement catégories:", err);
+        console.error("Erreur chargement Premium:", err);
       }
     };
     loadPremiumData();
@@ -183,24 +196,37 @@ const LiveTV = () => {
   // Charger les chaînes quand une catégorie est sélectionnée
   useEffect(() => {
     const loadChannels = async () => {
-      if (activeTab === 'premium' && selectedCategory !== "all") {
-        setIsLoadingPremium(true);
-        try {
-          const streams = await iptvService.getLiveStreams(selectedCategory);
-          setPremiumChannels(streams);
-        } catch (err) {
-          toast({
-            title: "Erreur de chargement",
-            description: "Impossible de charger les chaînes pour cette catégorie.",
-            variant: "destructive"
-          });
-        } finally {
-          setIsLoadingPremium(false);
+      if (activeTab === 'premium') {
+        if (selectedCategory === "all_streams") {
+          // Utiliser les chaînes déjà chargées si on veut tout voir
+          if (allPremiumChannels.length > 0) {
+            setPremiumChannels(allPremiumChannels);
+          } else {
+            setIsLoadingPremium(true);
+            const streams = await iptvService.getAllLiveStreams();
+            setPremiumChannels(streams);
+            setAllPremiumChannels(streams);
+            setIsLoadingPremium(false);
+          }
+        } else if (selectedCategory !== "all") {
+          setIsLoadingPremium(true);
+          try {
+            const streams = await iptvService.getLiveStreams(selectedCategory);
+            setPremiumChannels(streams);
+          } catch (err) {
+            toast({
+              title: "Erreur de chargement",
+              description: "Impossible de charger les chaînes.",
+              variant: "destructive"
+            });
+          } finally {
+            setIsLoadingPremium(false);
+          }
         }
       }
     };
     loadChannels();
-  }, [activeTab, selectedCategory]);
+  }, [activeTab, selectedCategory, allPremiumChannels.length]);
 
   const playPremiumChannel = (stream: XtreamStream) => {
     if (isLocked && !hasPass) {
@@ -233,7 +259,7 @@ const LiveTV = () => {
     });
   };
 
-  const filteredChannels = premiumChannels.filter(channel =>
+  const filteredChannels = (searchTerm ? allPremiumChannels : premiumChannels).filter(channel =>
     channel.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -502,13 +528,19 @@ const LiveTV = () => {
 
                 {/* Barre de Recherche */}
                 <div className="relative max-w-xl z-20 pointer-events-auto">
-                  <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-purple-400/50" />
+                  <button
+                    onClick={() => searchInputRef.current?.focus()}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 cursor-pointer hover:text-purple-300 transition-colors"
+                  >
+                    <SearchIcon className="h-5 w-5 text-purple-400/50" />
+                  </button>
                   <input
+                    ref={searchInputRef}
                     type="text"
-                    placeholder="Rechercher une chaîne premium..."
+                    placeholder="Rechercher une chaîne premium (global)..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-purple-900/10 border border-purple-500/20 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-purple-500/50 focus:bg-purple-900/20 transition-all font-medium placeholder:text-purple-400/30"
+                    className="w-full bg-purple-900/10 border border-purple-500/20 rounded-2xl py-4 pl-12 pr-12 outline-none focus:border-purple-500/50 focus:bg-purple-900/20 transition-all font-medium placeholder:text-purple-400/30"
                   />
                   {searchTerm && (
                     <button

@@ -89,13 +89,20 @@ export const iptvService = {
   // Récupérer toutes les chaînes (Attention: lourd)
   getAllLiveStreams: async (config: XtreamConfig = IPTV_SERVERS[0]): Promise<XtreamStream[]> => {
     try {
-      const response = await fetch(
-        `${config.url}/player_api.php?username=${config.username}&password=${config.password}&action=get_live_streams`
-      );
+      const url = `${config.url}/player_api.php?username=${config.username}&password=${config.password}&action=get_live_streams`;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+
+      const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error('Network response was not ok');
-      return await response.json();
+      const data = await response.json();
+      return JSON.parse(data.contents);
     } catch (error) {
       console.error('Error fetching all streams:', error);
+      // Essayer le serveur suivant en cas d'erreur
+      const currentIndex = IPTV_SERVERS.indexOf(config);
+      if (currentIndex < IPTV_SERVERS.length - 1) {
+        return iptvService.getAllLiveStreams(IPTV_SERVERS[currentIndex + 1]);
+      }
       return [];
     }
   },
