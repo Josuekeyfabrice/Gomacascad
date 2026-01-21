@@ -45,11 +45,14 @@ export const iptvService = {
   // Récupérer les catégories de chaînes Live
   getLiveCategories: async (config: XtreamConfig = IPTV_SERVERS[0]): Promise<XtreamCategory[]> => {
     try {
-      const response = await fetch(
-        `${config.url}/player_api.php?username=${config.username}&password=${config.password}&action=get_live_categories`
-      );
+      const url = `${config.url}/player_api.php?username=${config.username}&password=${config.password}&action=get_live_categories`;
+      // Utiliser un proxy CORS pour éviter les problèmes Mixed Content sur Vercel
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+
+      const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error('Network response was not ok');
-      return await response.json();
+      const data = await response.json();
+      return JSON.parse(data.contents);
     } catch (error) {
       console.error('Error fetching categories:', error);
       // Essayer le serveur suivant en cas d'erreur
@@ -64,11 +67,14 @@ export const iptvService = {
   // Récupérer les chaînes d'une catégorie spécifique
   getLiveStreams: async (categoryId: string, config: XtreamConfig = IPTV_SERVERS[0]): Promise<XtreamStream[]> => {
     try {
-      const response = await fetch(
-        `${config.url}/player_api.php?username=${config.username}&password=${config.password}&action=get_live_streams&category_id=${categoryId}`
-      );
+      const url = `${config.url}/player_api.php?username=${config.username}&password=${config.password}&action=get_live_streams&category_id=${categoryId}`;
+      // Utiliser un proxy CORS pour éviter les problèmes Mixed Content sur Vercel
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+
+      const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error('Network response was not ok');
-      return await response.json();
+      const data = await response.json();
+      return JSON.parse(data.contents);
     } catch (error) {
       console.error('Error fetching streams:', error);
       // Essayer le serveur suivant en cas d'erreur

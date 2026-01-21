@@ -501,7 +501,7 @@ const LiveTV = () => {
                 </div>
 
                 {/* Barre de Recherche */}
-                <div className="relative max-w-xl">
+                <div className="relative max-w-xl z-20 pointer-events-auto">
                   <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-purple-400/50" />
                   <input
                     type="text"
