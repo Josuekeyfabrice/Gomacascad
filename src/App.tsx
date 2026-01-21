@@ -14,6 +14,7 @@ import { PerformanceMonitor } from "@/components/common/PerformanceMonitor";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useNotifications } from "./hooks/useNotifications";
 import { usePushNotifications } from "./hooks/usePushNotifications";
+import { AIChatAssistant } from "./components/common/AIChatAssistant";
 
 // Lazy loading pages
 const Index = lazy(() => import("./pages/Index"));
@@ -41,6 +42,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const SellerDashboard = lazy(() => import("./pages/SellerDashboard"));
 const LiveShopping = lazy(() => import("./pages/LiveShopping"));
 const SellerPublicProfile = lazy(() => import("./pages/SellerPublicProfile"));
+const Studies = lazy(() => import("./pages/Studies"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -100,8 +102,10 @@ const App = () => (
                   <Route path="/live-tv" element={<LiveTV />} />
                   <Route path="/verify-seller" element={<VerifySeller />} />
                   <Route path="/wallet" element={<Wallet />} />
+                  <Route path="/studies" element={<Studies />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                <AIChatAssistant />
               </Suspense>
               <CompareBar />
             </AuthProvider>

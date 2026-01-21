@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Search, Heart, MessageCircle, User, Plus, LogOut, Phone, Shield, Download, ShieldCheck, Wallet } from 'lucide-react';
+import { Menu, X, Search, Heart, MessageCircle, User, Plus, LogOut, Phone, Shield, Download, ShieldCheck, Wallet, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -63,14 +63,14 @@ export const Header = () => {
         setIsAdmin(false);
         return;
       }
-      
+
       const { data } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .eq('role', 'admin')
         .maybeSingle();
-      
+
       setIsAdmin(!!data);
     };
 
@@ -178,6 +178,12 @@ export const Header = () => {
                       <Link to="/verify-seller" className="cursor-pointer text-primary font-semibold">
                         <ShieldCheck className="mr-2 h-4 w-4" />
                         Devenir Vérifié
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/studies" className="cursor-pointer">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Études en ligne
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -297,6 +303,12 @@ export const Header = () => {
                   <Link to="/verify-seller" onClick={() => setIsMenuOpen(false)}>
                     <ShieldCheck className="mr-2 h-5 w-5" />
                     Devenir Vérifié
+                  </Link>
+                </Button>
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link to="/studies" onClick={() => setIsMenuOpen(false)}>
+                    <BookOpen className="mr-2 h-5 w-5" />
+                    Études en ligne
                   </Link>
                 </Button>
                 <Button variant="ghost" className="justify-start" asChild>
