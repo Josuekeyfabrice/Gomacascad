@@ -17,7 +17,9 @@ const RECONNECTION_DELAY = 2000;
 const Call = () => {
   const { userId } = useParams<{ userId: string }>();
   const [searchParams] = useSearchParams();
-  const callType = searchParams.get('type') as 'voice' | 'video' || 'voice';
+  const [effectiveCallType, setEffectiveCallType] = useState<'voice' | 'video'>(
+    (searchParams.get('type') as 'voice' | 'video') || 'voice'
+  );
   const incomingCallId = searchParams.get('callId');
 
   const { user } = useAuth();
@@ -28,7 +30,7 @@ const Call = () => {
   const [callStatus, setCallStatus] = useState<'connecting' | 'ringing' | 'connected' | 'ended' | 'reconnecting'>('connecting');
   const [call, setCall] = useState<CallType | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isVideoEnabled, setIsVideoEnabled] = useState(callType === 'video');
+  const [isVideoEnabled, setIsVideoEnabled] = useState(effectiveCallType === 'video');
   const [callDuration, setCallDuration] = useState(0);
   const [connectionState, setConnectionState] = useState<string>('new');
   const [isWebRTCReady, setIsWebRTCReady] = useState(false);
@@ -62,6 +64,27 @@ const Call = () => {
   useEffect(() => {
     reconnectionAttemptsRef.current = reconnectionAttempts;
   }, [reconnectionAttempts]);
+
+  useEffect(() => {
+    if (call?.call_type) {
+      setEffectiveCallType(call.call_type as 'voice' | 'video');
+      setIsVideoEnabled(call.call_type === 'video');
+    }
+  }, [call]);
+
+  // Effect to attach streams to video elements once they are rendered
+  useEffect(() => {
+    if (callStatus === 'connected' && effectiveCallType === 'video') {
+      console.log('Attaching streams to video elements...');
+      if (remoteVideoRef.current && remoteStreamRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current;
+      }
+      if (localVideoRef.current && localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+        localVideoRef.current.muted = true;
+      }
+    }
+  }, [callStatus, effectiveCallType]);
 
   // Connection quality monitoring
   const connectionQuality = useConnectionQuality({
@@ -227,7 +250,7 @@ const Call = () => {
           noiseSuppression: true,
           autoGainControl: true,
         },
-        video: callType === 'video' ? {
+        video: effectiveCallType === 'video' ? {
           width: { ideal: 1280 },
           height: { ideal: 720 },
           facingMode: 'user',
@@ -240,11 +263,14 @@ const Call = () => {
         stream = await navigator.mediaDevices.getUserMedia(constraints);
       } catch (e) {
         console.error('Failed to get media with ideal constraints, trying fallback', e);
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'video' });
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: effectiveCallType === 'video'
+        });
       }
       localStreamRef.current = stream;
 
-      if (localVideoRef.current && callType === 'video') {
+      if (localVideoRef.current && effectiveCallType === 'video') {
         localVideoRef.current.srcObject = stream;
         localVideoRef.current.muted = true;
       }
@@ -269,7 +295,7 @@ const Call = () => {
           remoteStreamRef.current.addTrack(event.track);
         }
 
-        if (remoteVideoRef.current && callType === 'video') {
+        if (remoteVideoRef.current && effectiveCallType === 'video') {
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
         }
 
@@ -364,7 +390,7 @@ const Call = () => {
         variant: "destructive",
       });
     }
-  }, [user, userId, callType, handleSignalingMessage, toast, attemptReconnection]);
+  }, [user, userId, effectiveCallType, handleSignalingMessage, toast, attemptReconnection]);
 
   const sendInitialOffer = useCallback(async () => {
     const pc = peerConnectionRef.current;
@@ -376,7 +402,7 @@ const Call = () => {
 
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
-        offerToReceiveVideo: callType === 'video',
+        offerToReceiveVideo: effectiveCallType === 'video',
       });
 
       await pc.setLocalDescription(offer);
@@ -385,7 +411,7 @@ const Call = () => {
       console.error('Error creating initial offer:', error);
       hasCreatedOfferRef.current = false;
     }
-  }, [callType]);
+  }, [effectiveCallType]);
 
   const cleanup = useCallback(() => {
     localStreamRef.current?.getTracks().forEach(track => track.stop());
@@ -444,7 +470,7 @@ const Call = () => {
             caller_id: user.id,
             receiver_id: userId,
             status: 'pending',
-            call_type: callType,
+            call_type: effectiveCallType,
           })
           .select()
           .single();
@@ -485,7 +511,7 @@ const Call = () => {
     return () => {
       // Logic for cleanup on unmount is handled by a separate Effect for stability
     };
-  }, [user, userId, incomingCallId, navigate, toast]);
+  }, [user, userId, incomingCallId, navigate, toast, effectiveCallType, initWebRTC]);
 
   // Dedicated cleanup effect for unmount
   useEffect(() => {
@@ -661,7 +687,7 @@ const Call = () => {
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoEnabled(videoTrack.enabled);
-      } else if (callType === 'video') {
+      } else if (effectiveCallType === 'video') {
         toast({ title: "Caméra indisponible", description: "Aucune piste vidéo trouvée", variant: "destructive" });
       }
     }
@@ -702,7 +728,7 @@ const Call = () => {
       />
 
       {/* Video Area */}
-      {callType === 'video' && callStatus === 'connected' && (
+      {effectiveCallType === 'video' && callStatus === 'connected' && (
         <div className="flex-1 relative bg-black">
           <video
             ref={remoteVideoRef}
@@ -727,7 +753,7 @@ const Call = () => {
       )}
 
       {/* Voice Call / Connecting UI */}
-      {(callType === 'voice' || callStatus !== 'connected') && (
+      {(effectiveCallType === 'voice' || callStatus !== 'connected') && (
         <div className="flex-1 flex flex-col items-center justify-center p-8">
           <Avatar className="h-32 w-32 mb-6">
             <AvatarImage src={partner.avatar_url || ''} />
@@ -823,7 +849,7 @@ const Call = () => {
               {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </Button>
 
-            {callType === 'video' && (
+            {effectiveCallType === 'video' && (
               <Button
                 variant={isVideoEnabled ? 'secondary' : 'destructive'}
                 size="lg"
