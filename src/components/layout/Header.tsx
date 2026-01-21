@@ -175,7 +175,7 @@ export const Header = () => {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/verify-seller" className="cursor-pointer text-primary font-semibold">
+                      <Link to="/sellers" className="cursor-pointer text-primary font-semibold">
                         <ShieldCheck className="mr-2 h-4 w-4" />
                         Devenir Vérifié
                       </Link>
@@ -300,7 +300,7 @@ export const Header = () => {
                   </Link>
                 </Button>
                 <Button variant="ghost" className="justify-start text-primary font-semibold" asChild>
-                  <Link to="/verify-seller" onClick={() => setIsMenuOpen(false)}>
+                  <Link to="/sellers" onClick={() => setIsMenuOpen(false)}>
                     <ShieldCheck className="mr-2 h-5 w-5" />
                     Devenir Vérifié
                   </Link>

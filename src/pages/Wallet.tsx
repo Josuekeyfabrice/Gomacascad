@@ -89,8 +89,8 @@ const Wallet = () => {
       console.error('Error fetching wallet:', error);
       let errorMessage = "Impossible de charger votre portefeuille";
       
-      if (error.message?.includes('relation "wallets" does not exist') || error.message?.includes('relation "wallet_transactions" does not exist')) {
-        errorMessage = "Les tables de base de données (wallets) sont manquantes. Veuillez exécuter les migrations Supabase.";
+      if (error.message?.includes('relation "wallets" does not exist') || error.message?.includes('relation "wallet_transactions" does not exist') || error.message?.includes('Could not find the table')) {
+        errorMessage = "Les tables de base de données (wallets) sont manquantes. Veuillez exécuter le script SQL de migration dans votre interface Supabase.";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -155,8 +155,7 @@ const Wallet = () => {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(true); // Keep loading state for a bit for transition
-      setTimeout(() => setIsLoading(false), 1500);
+      setIsLoading(false);
     }
   };
 
