@@ -649,6 +649,8 @@ const Call = () => {
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setIsMuted(!audioTrack.enabled);
+      } else {
+        toast({ title: "Micro indisponible", description: "Aucune piste audio trouvée", variant: "destructive" });
       }
     }
   };
@@ -659,6 +661,8 @@ const Call = () => {
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoEnabled(videoTrack.enabled);
+      } else if (callType === 'video') {
+        toast({ title: "Caméra indisponible", description: "Aucune piste vidéo trouvée", variant: "destructive" });
       }
     }
   };

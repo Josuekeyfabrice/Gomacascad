@@ -4,12 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Loader2, Volume2, VolumeX, Maximize } from 'lucide-react';
 
 interface LivePlayerProps {
-    url: string;
+    url?: string;
+    stream?: MediaStream | null;
     isLive?: boolean;
     viewers?: number;
 }
 
-export const LivePlayer = ({ url, isLive = true, viewers = 0 }: LivePlayerProps) => {
+export const LivePlayer = ({ url, stream, isLive = true, viewers = 0 }: LivePlayerProps) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [loading, setLoading] = useState(true);
     const [isMuted, setIsMuted] = useState(true);
@@ -17,9 +18,17 @@ export const LivePlayer = ({ url, isLive = true, viewers = 0 }: LivePlayerProps)
     useEffect(() => {
         let hls: Hls;
 
-        if (videoRef.current) {
-            const video = videoRef.current;
+        const video = videoRef.current;
+        if (!video) return;
 
+        if (stream) {
+            video.srcObject = stream;
+            setLoading(false);
+            video.play().catch(() => console.log("Autoplay blocked"));
+            return;
+        }
+
+        if (url) {
             if (Hls.isSupported()) {
                 hls = new Hls();
                 hls.loadSource(url);
@@ -27,7 +36,6 @@ export const LivePlayer = ({ url, isLive = true, viewers = 0 }: LivePlayerProps)
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     setLoading(false);
                     video.play().catch(() => {
-                        // Autoplay blocked
                         console.log("Autoplay blocked, waiting for user");
                     });
                 });
@@ -45,7 +53,7 @@ export const LivePlayer = ({ url, isLive = true, viewers = 0 }: LivePlayerProps)
                 hls.destroy();
             }
         };
-    }, [url]);
+    }, [url, stream]);
 
     const toggleMute = () => {
         if (videoRef.current) {

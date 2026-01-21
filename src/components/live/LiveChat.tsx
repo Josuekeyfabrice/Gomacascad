@@ -28,6 +28,36 @@ export const LiveChat = ({ sessionId }: LiveChatProps) => {
     const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
     useEffect(() => {
+        // Charger l'historique des messages
+        const loadHistory = async () => {
+            const { data, error } = await supabase
+                .from('live_chat_messages')
+                .select(`
+                    id,
+                    user_id,
+                    content,
+                    message_type,
+                    profiles:user_id(full_name, avatar_url)
+                `)
+                .eq('session_id', sessionId)
+                .order('created_at', { ascending: true })
+                .limit(50);
+
+            if (!error && data) {
+                const formattedMessages: Message[] = data.map(m => ({
+                    id: m.id,
+                    user_id: m.user_id,
+                    name: (m.profiles as any)?.full_name || 'Utilisateur',
+                    avatar: (m.profiles as any)?.avatar_url,
+                    content: m.content,
+                    type: m.message_type as any
+                }));
+                setMessages(formattedMessages);
+            }
+        };
+
+        loadHistory();
+
         const channelName = `live-chat-${sessionId}`;
         const channel = supabase.channel(channelName, {
             config: { broadcast: { self: true } }
@@ -62,6 +92,15 @@ export const LiveChat = ({ sessionId }: LiveChatProps) => {
             type: 'text'
         };
 
+        // Sauvegarder dans la base de données
+        await supabase.from('live_chat_messages').insert({
+            session_id: sessionId,
+            user_id: user.id,
+            content: inputValue,
+            message_type: 'text'
+        });
+
+        // Diffuser en temps réel
         await channelRef.current.send({
             type: 'broadcast',
             event: 'message',
@@ -81,6 +120,14 @@ export const LiveChat = ({ sessionId }: LiveChatProps) => {
             content: '❤️',
             type: 'like'
         };
+
+        // Optionnel: On peut aussi sauvegarder les likes si on veut
+        await supabase.from('live_chat_messages').insert({
+            session_id: sessionId,
+            user_id: user.id,
+            content: '❤️',
+            message_type: 'like'
+        });
 
         await channelRef.current.send({
             type: 'broadcast',

@@ -32,6 +32,8 @@ interface LiveSession {
   } | null;
 }
 
+import { WebRTCSignaling, getRTCConfiguration } from '@/utils/webrtc-signaling';
+
 const LiveShopping = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -45,11 +47,107 @@ const LiveShopping = () => {
   const [showStartModal, setShowStartModal] = useState(false);
   const [newLiveTitle, setNewLiveTitle] = useState('');
 
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const hostVideoRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peerConnectionsRef = useRef<{ [key: string]: RTCPeerConnection }>({});
+  const signalingRef = useRef<WebRTCSignaling | null>(null);
 
   useEffect(() => {
     loadSessions();
   }, []);
+
+  // WebRTC Signaling for Live
+  useEffect(() => {
+    if (!activeSession || !user) return;
+
+    const isHost = activeSession.seller_id === user.id;
+
+    // Pour le Shopping Live, on utilise le sessionId comme callId pour la signalisation
+    const signaling = new WebRTCSignaling(
+      activeSession.id,
+      user.id,
+      isHost ? 'all' : activeSession.seller_id, // Les spectateurs contactent le vendeur
+      async (message) => {
+        if (isHost) {
+          handleSignalingAsHost(message);
+        } else {
+          handleSignalingAsViewer(message);
+        }
+      }
+    );
+
+    signaling.connect().then(() => {
+      console.log("Signaling connected for Live Shopping");
+      if (!isHost) {
+        // Le spectateur se manifeste
+        signaling.sendPresence('ready');
+      }
+    });
+
+    signalingRef.current = signaling;
+
+    return () => {
+      signaling.disconnect();
+      Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
+      peerConnectionsRef.current = {};
+    };
+  }, [activeSession, user?.id]);
+
+  const handleSignalingAsHost = async (message: any) => {
+    if (message.type === 'presence' && message.payload.status === 'ready') {
+      // Un nouveau spectateur est là, on lui envoie un offer
+      const viewerId = message.from;
+      const pc = createPeerConnection(viewerId, true);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      signalingRef.current?.sendOffer(offer, viewerId);
+    } else if (message.type === 'answer') {
+      const pc = peerConnectionsRef.current[message.from];
+      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(message.payload));
+    } else if (message.type === 'ice-candidate') {
+      const pc = peerConnectionsRef.current[message.from];
+      if (pc) await pc.addIceCandidate(new RTCIceCandidate(message.payload));
+    }
+  };
+
+  const handleSignalingAsViewer = async (message: any) => {
+    if (message.type === 'offer') {
+      const pc = createPeerConnection(message.from, false);
+      await pc.setRemoteDescription(new RTCSessionDescription(message.payload));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      signalingRef.current?.sendAnswer(answer);
+    } else if (message.type === 'ice-candidate') {
+      const pc = peerConnectionsRef.current[message.from];
+      if (pc) await pc.addIceCandidate(new RTCIceCandidate(message.payload));
+    }
+  };
+
+  const createPeerConnection = (partnerId: string, isHost: boolean) => {
+    const pc = new RTCPeerConnection(getRTCConfiguration());
+    peerConnectionsRef.current[partnerId] = pc;
+
+    if (isHost && localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => {
+        pc.addTrack(track, localStreamRef.current!);
+      });
+    }
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        signalingRef.current?.sendIceCandidate(event.candidate, partnerId);
+      }
+    };
+
+    pc.ontrack = (event) => {
+      if (!isHost && event.streams[0]) {
+        setRemoteStream(event.streams[0]);
+      }
+    };
+
+    return pc;
+  };
 
   const loadSessions = async () => {
     try {
@@ -73,8 +171,8 @@ const LiveShopping = () => {
       setIsHostMode(true);
       setShowStartModal(false);
 
-      // Start camera preview
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = stream;
       if (hostVideoRef.current) hostVideoRef.current.srcObject = stream;
 
     } catch (error) {
@@ -83,8 +181,8 @@ const LiveShopping = () => {
   };
 
   const stopHosting = () => {
-    const stream = hostVideoRef.current?.srcObject as MediaStream;
-    stream?.getTracks().forEach(t => t.stop());
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current = null;
     setIsHostMode(false);
     setActiveSession(null);
     loadSessions();
@@ -95,12 +193,14 @@ const LiveShopping = () => {
       <div className="min-h-screen bg-black text-white flex flex-col overflow-hidden">
         <header className="p-4 flex items-center justify-between z-20 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={stopHosting} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setActiveSession(null)} className="text-white hover:bg-white/10">
               <X className="h-6 w-6" />
             </Button>
             <div>
               <h2 className="font-bold">{activeSession.title}</h2>
-              <p className="text-xs text-white/60">Par {user?.user_metadata?.full_name || "Moi"}</p>
+              <p className="text-xs text-white/60">
+                Par {activeSession.seller?.full_name || "Vendeur"}
+              </p>
             </div>
           </div>
           <Badge className="bg-red-500 animate-pulse border-none">LIVE</Badge>
@@ -111,7 +211,7 @@ const LiveShopping = () => {
             {isHostMode ? (
               <video ref={hostVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             ) : (
-              <LivePlayer url="https://demo.unified-streaming.com/k8s/live/stable/sintel.isml/.m3u8" viewers={activeSession.viewers_count} />
+              <LivePlayer stream={remoteStream} viewers={activeSession.viewers_count} />
             )}
 
             {/* Host Controls */}

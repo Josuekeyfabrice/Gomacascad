@@ -43,9 +43,9 @@ export class WebRTCSignaling {
       this.channel
         .on('broadcast', { event: 'signaling' }, ({ payload }) => {
           const message = payload as SignalingMessage;
-          console.log('Received signaling message:', message.type, 'from:', message.from);
+          console.log('Received signaling message:', message.type, 'from:', message.from, 'to:', message.to);
 
-          if (message.to === this.userId) {
+          if (message.to === this.userId || this.partnerId === 'all') {
             this.onMessage(message);
           }
         })
@@ -60,18 +60,18 @@ export class WebRTCSignaling {
     });
   }
 
-  async sendOffer(offer: RTCSessionDescriptionInit) {
+  async sendOffer(offer: RTCSessionDescriptionInit, to?: string) {
     if (!this.channel) return;
 
     const message: SignalingMessage = {
       type: 'offer',
       payload: offer,
       from: this.userId,
-      to: this.partnerId,
+      to: to || this.partnerId,
       callId: this.callId,
     };
 
-    console.log('Sending offer to:', this.partnerId);
+    console.log('Sending offer to:', to || this.partnerId);
     await this.channel.send({
       type: 'broadcast',
       event: 'signaling',
@@ -98,18 +98,18 @@ export class WebRTCSignaling {
     });
   }
 
-  async sendIceCandidate(candidate: RTCIceCandidate) {
+  async sendIceCandidate(candidate: RTCIceCandidate, to?: string) {
     if (!this.channel) return;
 
     const message: SignalingMessage = {
       type: 'ice-candidate',
       payload: candidate.toJSON(),
       from: this.userId,
-      to: this.partnerId,
+      to: to || this.partnerId,
       callId: this.callId,
     };
 
-    console.log('Sending ICE candidate to:', this.partnerId);
+    console.log('Sending ICE candidate to:', to || this.partnerId);
     await this.channel.send({
       type: 'broadcast',
       event: 'signaling',
