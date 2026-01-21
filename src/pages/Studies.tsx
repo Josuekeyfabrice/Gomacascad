@@ -11,7 +11,11 @@ import {
     Laptop,
     Search,
     CheckCircle2,
-    User
+    User,
+    HeartPulse,
+    Sprout,
+    Scale,
+    Calculator
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +58,63 @@ const STUDY_CATEGORIES = [
             { name: 'Khan Academy', type: 'Plateforme', link: 'https://fr.khanacademy.org', provider: 'Khan' },
             { name: 'Coursera (Cours gratuits)', type: 'Plateforme', link: 'https://www.coursera.org', provider: 'Plusieurs' },
             { name: 'Canva Design School', type: 'Cours', link: 'https://www.canva.com/designschool/', provider: 'Canva' }
+        ]
+    },
+    {
+        id: 'business',
+        title: 'Business & Entrepreneuriat',
+        icon: <GraduationCap className="h-6 w-6" />,
+        description: 'Apprenez à lancer votre commerce et gérer vos finances.',
+        color: 'bg-green-500/10 text-green-500',
+        resources: [
+            { name: 'Y Combinator Library', type: 'Articles', link: 'https://www.ycombinator.com/library', provider: 'YC' },
+            { name: 'Shopify Academy', type: 'Cours', link: 'https://www.shopify.com/learn', provider: 'Shopify' },
+            { name: 'HubSpot Academy', type: 'Certification', link: 'https://academy.hubspot.com', provider: 'HubSpot' }
+        ]
+    },
+    {
+        id: 'health',
+        title: 'Santé & Bien-être',
+        icon: <HeartPulse className="h-6 w-6" />,
+        description: 'Conseils de santé, nutrition et premiers secours.',
+        color: 'bg-red-500/10 text-red-500',
+        resources: [
+            { name: 'O.M.S. Afrique', type: 'Portail', link: 'https://www.afro.who.int/fr', provider: 'OMS' },
+            { name: 'Healthline', type: 'Articles', link: 'https://www.healthline.com', provider: 'Healthline' },
+            { name: 'Croix-Rouge (Secourisme)', type: 'Vidéos', link: 'https://www.youtube.com/user/IFRC', provider: 'YouTube' }
+        ]
+    },
+    {
+        id: 'agriculture',
+        title: 'Agriculture',
+        icon: <Sprout className="h-6 w-6" />,
+        description: 'Techniques agricoles modernes et développement durable.',
+        color: 'bg-emerald-500/10 text-emerald-500',
+        resources: [
+            { name: 'F.A.O. Ressources', type: 'Documentation', link: 'https://www.fao.org/biotechnology/fr/', provider: 'FAO' },
+            { name: 'Agri-Digital', type: 'Plateforme', link: 'https://agridigital.cd', provider: 'Agri-Digital' }
+        ]
+    },
+    {
+        id: 'law',
+        title: 'Droit & Citoyenneté',
+        icon: <Scale className="h-6 w-6" />,
+        description: 'Droits civiques et fondamentaux du droit des affaires.',
+        color: 'bg-slate-500/10 text-slate-500',
+        resources: [
+            { name: 'Droit Afrique', type: 'Portail', link: 'https://www.droit-afrique.com', provider: 'Droit Afrique' },
+            { name: 'OHADA.com', type: 'Documentation', link: 'https://www.ohada.com', provider: 'OHADA' }
+        ]
+    },
+    {
+        id: 'maths',
+        title: 'Maths & Sciences',
+        icon: <Calculator className="h-6 w-6" />,
+        description: 'Maîtrisez les mathématiques et les concepts scientifiques.',
+        color: 'bg-cyan-500/10 text-cyan-500',
+        resources: [
+            { name: 'Khan Academy Math', type: 'Cours', link: 'https://fr.khanacademy.org/math', provider: 'Khan' },
+            { name: 'Brilliant.org', type: 'Interactif', link: 'https://brilliant.org', provider: 'Brilliant' }
         ]
     }
 ];

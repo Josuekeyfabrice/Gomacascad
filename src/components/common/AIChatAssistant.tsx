@@ -15,12 +15,17 @@ interface Message {
 const APP_INFO = {
     name: "Goma Cascade",
     features: {
-        marketplace: "Achetez et vendez des produits localement ou à distance.",
-        liveShopping: "Participez à des ventes en direct avec vidéo et chat en temps réel.",
-        liveTV: "Regardez des chaînes de télévision en direct via IPTV Premium.",
-        wallet: "Gérez votre argent et effectuez des transactions sécurisées.",
-        calls: "Passez des appels audio et vidéo de haute qualité avec vos contacts.",
-        studies: "Apprenez l'informatique, l'anglais et plus encore via notre nouvelle page d'études en ligne."
+        marketplace: "Achetez et vendez des produits localement ou à distance. Cliquez sur 'Vendre' pour ajouter un article.",
+        liveShopping: "Assistez à des ventes en direct. Pour participer, allez dans 'Live Shopping', choisissez une session et interagissez avec le vendeur en temps réel.",
+        liveTV: "Regardez des chaînes premium via IPTV. Accédez à la section 'IPTV' pour voir la liste des chaînes disponibles.",
+        wallet: "Gérez votre solde. Pour payer, utilisez votre portefeuille Goma Wallet lors de la validation de commande ou via QR code.",
+        calls: "Appels audio et vidéo gratuits. Ouvrez une conversation avec un contact et cliquez sur l'icône caméra ou téléphone.",
+        studies: "Formations gratuites. Visitez la page 'Études' pour accéder aux cours d'informatique, d'anglais et de business."
+    },
+    guides: {
+        payment: "Pour effectuer un paiement : 1. Rechargez votre Wallet. 2. Choisissez un produit. 3. Sélectionnez 'Goma Wallet' comme mode de paiement au checkout.",
+        selling: "Pour vendre : 1. Cliquez sur le bouton 'Vendre' en haut de l'écran. 2. Prenez des photos. 3. Ajoutez une description et un prix.",
+        streaming: "Pour lancer un Live Shopping : Vous devez être un vendeur vérifié. Allez dans votre tableau de bord vendeur et cliquez sur 'Démarrer le Direct'."
     }
 };
 
@@ -30,7 +35,15 @@ export const AIChatAssistant = () => {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'assistant',
-            content: `Bonjour ! Je suis l'assistant IA de Goma Cascade. Comment puis-je vous aider aujourd'hui ? Je peux vous parler du Marketplace, du Live Shopping, de l'IPTV ou même de nos cours en ligne.`
+            content: `Bonjour ! Je suis l'assistant IA de Goma Cascade. Voici les services que je peux vous présenter :
+- 🛒 **Marketplace** : Acheter et vendre
+- 🎥 **Live Shopping** : Ventes en direct interactives
+- 📺 **IPTV Premium** : Chaînes de télé en direct
+- 💳 **Goma Wallet** : Paiements sécurisés
+- 📞 **Appels & Vidéo** : Communication gratuite
+- 📚 **Goma Studies** : Cours en ligne gratuits
+
+Comment puis-je vous aider précisément ?`
         }
     ]);
     const [isLoading, setIsLoading] = useState(false);
@@ -52,24 +65,51 @@ export const AIChatAssistant = () => {
 
         // Simulate AI thinking
         setTimeout(() => {
-            let response = "Désolé, je ne suis pas sûr de comprendre. Pourriez-vous reformuler ? Je peux vous aider avec le Marketplace, la TV en direct ou le Live Shopping.";
+            let response = "Je n'ai pas bien compris votre demande. Je peux vous renseigner sur le Marketplace, le Live Shopping, l'IPTV, le Wallet, les Appels ou les Études. Que souhaitez-vous savoir ?";
 
-            const lowerLowerMessage = userMessage.toLowerCase();
+            const msg = userMessage.toLowerCase();
 
-            if (lowerLowerMessage.includes("vendre") || lowerLowerMessage.includes("acheter") || lowerLowerMessage.includes("marketplace") || lowerLowerMessage.includes("produit")) {
-                response = `${APP_INFO.features.marketplace} Vous pouvez cliquer sur le bouton 'Vendre' pour ajouter vos propres articles.`;
-            } else if (lowerLowerMessage.includes("live shopping") || lowerLowerMessage.includes("direct") || lowerLowerMessage.includes("streaming")) {
-                response = `${APP_INFO.features.liveShopping} C'est un excellent moyen de voir les produits en action avant de les acheter.`;
-            } else if (lowerLowerMessage.includes("tele") || lowerLowerMessage.includes("tv") || lowerLowerMessage.includes("iptv") || lowerLowerMessage.includes("chaine")) {
-                response = `${APP_INFO.features.liveTV} Allez dans la section 'IPTV Premium' pour commencer à regarder.`;
-            } else if (lowerLowerMessage.includes("argent") || lowerLowerMessage.includes("wallet") || lowerLowerMessage.includes("payer") || lowerLowerMessage.includes("portefeuille")) {
-                response = `${APP_INFO.features.wallet} Vous pouvez consulter votre solde dans la section 'Mon Portefeuille'.`;
-            } else if (lowerLowerMessage.includes("appel") || lowerLowerMessage.includes("video") || lowerLowerMessage.includes("camera")) {
-                response = `${APP_INFO.features.calls} Vous pouvez appeler vos amis directement depuis vos discussions.`;
-            } else if (lowerLowerMessage.includes("etude") || lowerLowerMessage.includes("cours") || lowerLowerMessage.includes("apprendre") || lowerLowerMessage.includes("anglais") || lowerLowerMessage.includes("informatique")) {
-                response = `${APP_INFO.features.studies} Nous proposons des ressources pour l'informatique, l'anglais et d'autres matières.`;
-            } else if (lowerLowerMessage.includes("salut") || lowerLowerMessage.includes("bonjour")) {
-                response = "Bonjour ! Quel plaisir de vous voir. Que voulez-vous savoir sur Goma Cascade ?";
+            if (msg.includes("vendre") || msg.includes("vendeur")) {
+                response = APP_INFO.guides.selling;
+            } else if (msg.includes("payer") || msg.includes("paiement") || msg.includes("acheter") || msg.includes("argent")) {
+                response = `${APP_INFO.features.wallet} ${APP_INFO.guides.payment}`;
+            } else if (msg.includes("live shopping") || msg.includes("direct") || msg.includes("streaming") || msg.includes("stream")) {
+                response = `${APP_INFO.features.liveShopping} ${APP_INFO.guides.streaming}`;
+            } else if (msg.includes("tele") || msg.includes("tv") || msg.includes("iptv") || msg.includes("chaine")) {
+                response = APP_INFO.features.liveTV;
+            } else if (msg.includes("appel") || msg.includes("video") || msg.includes("camera") || msg.includes("téléphone")) {
+                response = APP_INFO.features.calls;
+            } else if (msg.includes("etude") || msg.includes("cours") || msg.includes("apprendre") || msg.includes("anglais") || msg.includes("informatique") || msg.includes("formé") || msg.includes("formation")) {
+                response = APP_INFO.features.studies;
+            } else if (msg.includes("marketplace") || msg.includes("produit") || msg.includes("article")) {
+                response = APP_INFO.features.marketplace;
+            } else if (msg.includes("+") || msg.includes("-") || msg.includes("*") || msg.includes("/") || msg.includes("combien font") || msg.includes("calculer")) {
+                response = "Je peux vous aider pour des calculs simples ! Pour des opérations complexes, je vous recommande d'utiliser une calculatrice dédiée ou de suivre nos cours d'informatique.";
+                // Simple math evaluator simulator
+                try {
+                    const mathMatch = userMessage.match(/(\d+)\s*([\+\-\*\/])\s*(\d+)/);
+                    if (mathMatch) {
+                        const [_, n1, op, n2] = mathMatch;
+                        const num1 = parseFloat(n1);
+                        const num2 = parseFloat(n2);
+                        let res = 0;
+                        if (op === '+') res = num1 + num2;
+                        if (op === '-') res = num1 - num2;
+                        if (op === '*') res = num1 * num2;
+                        if (op === '/') res = num1 / num2;
+                        response = `Le résultat de ${n1} ${op} ${n2} est ${res}.`;
+                    }
+                } catch (e) {
+                    response = "Je n'ai pas pu calculer cela, essayez une opération simple comme '2 + 2'.";
+                }
+            } else if (msg.includes("histoire") || msg.includes("qui a") || msg.includes("quand") || msg.includes("fondé") || msg.includes("goma")) {
+                if (msg.includes("goma")) {
+                    response = "Goma est la capitale de la province du Nord-Kivu en République démocratique du Congo. C'est une ville dynamique située au bord du lac Kivu.";
+                } else {
+                    response = "C'est une excellente question historique ! Vous trouverez de nombreuses ressources sur l'histoire et la géographie dans notre section 'Goma Studies'.";
+                }
+            } else if (msg.includes("salut") || msg.includes("bonjour") || msg.includes("hello")) {
+                response = "Bonjour ! Je suis prêt à vous guider à travers les fonctionnalités de Goma Cascade. Par quoi voulez-vous commencer ?";
             }
 
             setMessages(prev => [...prev, { role: 'assistant', content: response }]);
@@ -121,8 +161,8 @@ export const AIChatAssistant = () => {
                                                     </div>
                                                     <div
                                                         className={`rounded-2xl px-4 py-2 text-sm ${message.role === 'assistant'
-                                                                ? 'bg-muted text-foreground rounded-tl-none'
-                                                                : 'gradient-primary text-primary-foreground rounded-tr-none'
+                                                            ? 'bg-muted text-foreground rounded-tl-none'
+                                                            : 'gradient-primary text-primary-foreground rounded-tr-none'
                                                             }`}
                                                     >
                                                         {message.content}
