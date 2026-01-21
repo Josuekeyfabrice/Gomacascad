@@ -23,9 +23,9 @@ export const useNotifications = () => {
   }, []);
 
   const showNotification = useCallback((
-    title: string, 
-    body: string, 
-    options?: { 
+    title: string,
+    body: string,
+    options?: {
       onClick?: () => void;
       playSound?: boolean;
       isCall?: boolean;
@@ -44,6 +44,7 @@ export const useNotifications = () => {
     toast({
       title,
       description: body,
+      duration: options?.isCall ? 30000 : 5000,
     });
 
     // Show browser notification if permission granted
@@ -53,7 +54,7 @@ export const useNotifications = () => {
         icon: '/pwa-192x192.png',
         badge: '/pwa-192x192.png',
         requireInteraction: options?.isCall,
-        tag: options?.isCall ? 'incoming-call' : 'message',
+        tag: options?.isCall ? 'incoming-call' : 'notification',
       });
 
       if (options?.onClick) {
@@ -64,7 +65,6 @@ export const useNotifications = () => {
         };
       }
 
-      // Auto close non-call notifications after 5 seconds
       if (!options?.isCall) {
         setTimeout(() => notification.close(), 5000);
       }
@@ -74,81 +74,39 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Subscribe to new messages
-    const messagesChannel = supabase
-      .channel('messages-notifications')
+    // Listen to notifications table (Centralized)
+    const notificationsChannel = supabase
+      .channel('app-notifications')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`,
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
         },
-        async (payload) => {
-          const message = payload.new as any;
-          
-          // Get sender info
-          const { data: sender } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('user_id', message.sender_id)
-            .single();
+        (payload) => {
+          const notification = payload.new as any;
 
-          const senderName = sender?.full_name || 'Quelqu\'un';
-          
           showNotification(
-            'Nouveau message',
-            `${senderName}: ${message.content.substring(0, 50)}${message.content.length > 50 ? '...' : ''}`,
+            notification.title,
+            notification.message,
             {
-              onClick: () => {
-                window.location.href = '/messages';
-              },
+              isCall: notification.type === 'call',
               playSound: true,
+              onClick: () => {
+                if (notification.type === 'message') window.location.href = '/messages';
+                if (notification.type === 'call') window.location.href = `/call/${notification.data?.caller_id}`;
+              }
             }
           );
         }
       )
       .subscribe();
 
-    // Subscribe to incoming calls
-    const callsChannel = supabase
-      .channel('calls-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'calls',
-          filter: `receiver_id=eq.${user.id}`,
-        },
-        async (payload) => {
-          const call = payload.new as any;
-          
-          if (call.status === 'pending') {
-            activeCallId.current = call.id;
-            
-            // Get caller info
-            const { data: caller } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('user_id', call.caller_id)
-              .single();
-
-            const callerName = caller?.full_name || 'Quelqu\'un';
-            const callTypeText = call.call_type === 'video' ? 'vidéo' : 'vocal';
-            
-            showNotification(
-              'Appel entrant',
-              `${callerName} vous appelle (${callTypeText})`,
-              {
-                isCall: true,
-                playSound: true,
-              }
-            );
-          }
-        }
-      )
+    // Still listen for call updates to stop ringtone
+    const callsUpdateChannel = supabase
+      .channel('calls-status-notifications')
       .on(
         'postgres_changes',
         {
@@ -159,21 +117,16 @@ export const useNotifications = () => {
         },
         (payload) => {
           const call = payload.new as any;
-          
-          // Stop ringtone when call is answered, rejected, or ended
-          if (call.id === activeCallId.current) {
-            if (call.status === 'accepted' || call.status === 'rejected' || call.status === 'ended') {
-              stopRingtone();
-              activeCallId.current = null;
-            }
+          if (call.status === 'accepted' || call.status === 'rejected' || call.status === 'ended') {
+            stopRingtone();
           }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(messagesChannel);
-      supabase.removeChannel(callsChannel);
+      supabase.removeChannel(notificationsChannel);
+      supabase.removeChannel(callsUpdateChannel);
       stopRingtone();
     };
   }, [user, showNotification, stopRingtone]);

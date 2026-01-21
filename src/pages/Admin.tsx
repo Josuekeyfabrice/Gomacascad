@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Loader2, Users, Package, Flag, Search, 
-  CheckCircle, XCircle, Eye, Trash2, Shield, Star, Percent, BadgeCheck, BarChart3
+import {
+  Loader2, Users, Package, Flag, Search,
+  CheckCircle, XCircle, Eye, Trash2, Shield, Star, Percent, BadgeCheck, BarChart3, Video
 } from 'lucide-react';
 import { DashboardAnalytics } from '@/components/admin/DashboardAnalytics';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
@@ -28,7 +28,7 @@ const Admin = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
@@ -39,7 +39,9 @@ const Admin = () => {
     totalProducts: 0,
     totalUsers: 0,
     pendingReports: 0,
+    activeLives: 0,
   });
+  const [liveSessions, setLiveSessions] = useState<any[]>([]);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -95,14 +97,22 @@ const Admin = () => {
       .select('*')
       .order('created_at', { ascending: false });
 
+    // Fetch live sessions
+    const { data: liveData } = await supabase
+      .from('live_sessions')
+      .select('*, profiles(full_name)')
+      .order('created_at', { ascending: false });
+
     setProducts(productsData || []);
     setUsers(usersData || []);
     setReports(reportsData || []);
+    setLiveSessions(liveData || []);
 
     setStats({
       totalProducts: productsData?.length || 0,
       totalUsers: usersData?.length || 0,
       pendingReports: reportsData?.filter(r => r.status === 'pending').length || 0,
+      activeLives: liveData?.filter(l => l.status === 'live').length || 0,
     });
 
     setLoading(false);
@@ -161,9 +171,9 @@ const Admin = () => {
     if (error) {
       toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     } else {
-      toast({ 
-        title: 'Succès', 
-        description: currentStatus ? 'Produit retiré des vedettes' : 'Produit mis en vedette' 
+      toast({
+        title: 'Succès',
+        description: currentStatus ? 'Produit retiré des vedettes' : 'Produit mis en vedette'
       });
       fetchData();
     }
@@ -172,9 +182,9 @@ const Admin = () => {
   const setProductDiscount = async (productId: string, originalPrice: number | null, discountPercentage: number | null) => {
     const { error } = await supabase
       .from('products')
-      .update({ 
+      .update({
         original_price: originalPrice,
-        discount_percentage: discountPercentage 
+        discount_percentage: discountPercentage
       })
       .eq('id', productId);
 
@@ -196,6 +206,22 @@ const Admin = () => {
       toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Succès', description: 'Rapport mis à jour' });
+      fetchData();
+    }
+  };
+
+  const endLiveSession = async (sessionId: string) => {
+    if (!confirm('Voulez-vous vraiment terminer cette session?')) return;
+
+    const { error } = await supabase
+      .from('live_sessions')
+      .update({ status: 'ended' })
+      .eq('id', sessionId);
+
+    if (error) {
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Succès', description: 'Session terminée par l\'admin' });
       fetchData();
     }
   };
@@ -222,7 +248,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-6">
           <Shield className="w-8 h-8 text-primary" />
@@ -289,6 +315,10 @@ const Admin = () => {
             <TabsTrigger value="reports">
               <Flag className="w-4 h-4 mr-2" />
               Signalements ({reports.length})
+            </TabsTrigger>
+            <TabsTrigger value="live-sessions">
+              <Video className="w-4 h-4 mr-2" />
+              Live Shopping ({stats.activeLives} actifs)
             </TabsTrigger>
           </TabsList>
 
@@ -388,37 +418,37 @@ const Admin = () => {
                                     const origPrice = formData.get('original_price') as string;
                                     const discPercent = formData.get('discount_percentage') as string;
                                     setProductDiscount(
-                                      product.id, 
+                                      product.id,
                                       origPrice ? parseFloat(origPrice) : null,
                                       discPercent ? parseInt(discPercent) : null
                                     );
                                   }} className="space-y-4">
                                     <div className="space-y-2">
                                       <Label htmlFor="original_price">Prix original (avant réduction)</Label>
-                                      <Input 
-                                        id="original_price" 
+                                      <Input
+                                        id="original_price"
                                         name="original_price"
-                                        type="number" 
-                                        defaultValue={product.original_price || ''} 
+                                        type="number"
+                                        defaultValue={product.original_price || ''}
                                         placeholder="Prix original"
                                       />
                                     </div>
                                     <div className="space-y-2">
                                       <Label htmlFor="discount_percentage">Pourcentage de réduction (%)</Label>
-                                      <Input 
-                                        id="discount_percentage" 
+                                      <Input
+                                        id="discount_percentage"
                                         name="discount_percentage"
-                                        type="number" 
+                                        type="number"
                                         min="0"
                                         max="100"
-                                        defaultValue={product.discount_percentage || ''} 
+                                        defaultValue={product.discount_percentage || ''}
                                         placeholder="Ex: 20"
                                       />
                                     </div>
                                     <div className="flex gap-2">
                                       <Button type="submit" className="flex-1">Appliquer</Button>
-                                      <Button 
-                                        type="button" 
+                                      <Button
+                                        type="button"
                                         variant="outline"
                                         onClick={() => setProductDiscount(product.id, null, null)}
                                       >
@@ -525,9 +555,9 @@ const Admin = () => {
                               if (error) {
                                 toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
                               } else {
-                                toast({ 
-                                  title: 'Succès', 
-                                  description: profile.is_verified ? 'Vérification retirée' : 'Vendeur vérifié' 
+                                toast({
+                                  title: 'Succès',
+                                  description: profile.is_verified ? 'Vérification retirée' : 'Vendeur vérifié'
                                 });
                                 fetchData();
                               }
@@ -572,15 +602,15 @@ const Admin = () => {
                               report.status === 'pending'
                                 ? 'secondary'
                                 : report.status === 'resolved'
-                                ? 'default'
-                                : 'destructive'
+                                  ? 'default'
+                                  : 'destructive'
                             }
                           >
                             {report.status === 'pending'
                               ? 'En attente'
                               : report.status === 'resolved'
-                              ? 'Résolu'
-                              : 'Rejeté'}
+                                ? 'Résolu'
+                                : 'Rejeté'}
                           </Badge>
                         </td>
                         <td className="p-4">
@@ -602,6 +632,63 @@ const Admin = () => {
                             >
                               <XCircle className="w-4 h-4 text-destructive" />
                             </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Live Sessions Tab */}
+          <TabsContent value="live-sessions">
+            <div className="bg-card border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="text-left p-4 font-medium">Session</th>
+                      <th className="text-left p-4 font-medium">Vendeur</th>
+                      <th className="text-left p-4 font-medium">Statut</th>
+                      <th className="text-left p-4 font-medium">Début</th>
+                      <th className="text-left p-4 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {liveSessions.map((session) => (
+                      <tr key={session.id} className="border-t">
+                        <td className="p-4 font-medium">{session.title}</td>
+                        <td className="p-4">{session.profiles?.full_name || 'Vendeur'}</td>
+                        <td className="p-4">
+                          <Badge variant={session.status === 'live' ? 'destructive' : 'secondary'} className={session.status === 'live' ? 'animate-pulse' : ''}>
+                            {session.status === 'live' ? 'EN DIRECT' : session.status}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          {new Date(session.created_at).toLocaleString('fr-FR')}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => navigate(`/live/${session.id}`)}
+                              title="Rejoindre"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            {session.status === 'live' && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => endLiveSession(session.id)}
+                                title="Terminer la session"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

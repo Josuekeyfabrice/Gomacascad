@@ -4,13 +4,13 @@ import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Wallet as WalletIcon, 
-  Plus, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  History, 
-  CreditCard, 
+import {
+  Wallet as WalletIcon,
+  Plus,
+  ArrowUpRight,
+  ArrowDownLeft,
+  History,
+  CreditCard,
   Smartphone,
   CheckCircle2,
   Clock,
@@ -38,24 +38,99 @@ const Wallet = () => {
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState("5");
   const [isLoading, setIsLoading] = useState(false);
-  
-  const [transactions, setTransactions] = useState([
-    { id: 1, type: 'recharge', amount: 10, date: '2026-01-15', status: 'completed', method: 'M-Pesa' },
-    { id: 2, type: 'payment', amount: -2, date: '2026-01-14', status: 'completed', description: 'Boost Annonce' },
-    { id: 3, type: 'payment', amount: -1, date: '2026-01-14', status: 'completed', description: 'Pass TV Journalier' },
-  ]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [walletId, setWalletId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchWalletData();
+    }
+  }, [user]);
+
+  const fetchWalletData = async () => {
+    try {
+      // Get or create wallet
+      let { data: wallet, error: walletError } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (walletError) throw walletError;
+
+      if (!wallet && user) {
+        const { data: newWallet, error: createError } = await supabase
+          .from('wallets')
+          .insert({ user_id: user.id, balance: 0 })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        wallet = newWallet;
+      }
+
+      if (wallet) {
+        setBalance(Number(wallet.balance));
+        setWalletId(wallet.id);
+
+        // Fetch transactions
+        const { data: txData, error: txError } = await supabase
+          .from('wallet_transactions')
+          .select('*')
+          .eq('wallet_id', wallet.id)
+          .order('created_at', { ascending: false });
+
+        if (txError) throw txError;
+        setTransactions(txData || []);
+      }
+    } catch (error: any) {
+      console.error('Error fetching wallet:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger votre portefeuille",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleRecharge = async () => {
+    if (!walletId) return;
     setIsLoading(true);
-    // Simulation de l'appel PawaPay avec le jeton fourni
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      // Insert pending transaction
+      const { error } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          wallet_id: walletId,
+          type: 'recharge',
+          amount: parseFloat(rechargeAmount),
+          status: 'pending',
+          method: 'PawaPay',
+          description: 'Recharge Portefeuille'
+        });
+
+      if (error) throw error;
+
       setIsRechargeOpen(false);
       toast({
         title: "Demande de paiement envoyée",
         description: `Veuillez confirmer le paiement de ${rechargeAmount}$ sur votre téléphone.`,
       });
-    }, 1500);
+
+      // Refresh transactions (it will stay pending until manually or webhook updated)
+      fetchWalletData();
+
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(true); // Keep loading state for a bit for transition
+      setTimeout(() => setIsLoading(false), 1500);
+    }
   };
 
   return (
@@ -71,7 +146,7 @@ const Wallet = () => {
               </h1>
               <p className="text-muted-foreground mt-1">Gérez votre solde et vos transactions GOMACASCADE.</p>
             </div>
-            
+
             <Dialog open={isRechargeOpen} onOpenChange={setIsRechargeOpen}>
               <DialogTrigger asChild>
                 <Button className="gradient-primary rounded-xl gap-2 font-bold shadow-lg hover:scale-105 transition-transform">
@@ -101,7 +176,7 @@ const Wallet = () => {
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {["5", "10", "20"].map((amt) => (
-                      <Button 
+                      <Button
                         key={amt}
                         variant={rechargeAmount === amt ? "default" : "outline"}
                         onClick={() => setRechargeAmount(amt)}
@@ -125,8 +200,8 @@ const Wallet = () => {
                     </div>
                   </div>
                 </div>
-                <Button 
-                  onClick={handleRecharge} 
+                <Button
+                  onClick={handleRecharge}
                   disabled={isLoading}
                   className="w-full gradient-primary h-12 rounded-xl font-bold text-lg"
                 >
@@ -140,7 +215,7 @@ const Wallet = () => {
           </div>
 
           {/* Balance Card */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -215,7 +290,9 @@ const Wallet = () => {
                       </div>
                       <div>
                         <p className="font-bold">{tx.type === 'recharge' ? `Recharge via ${tx.method}` : tx.description}</p>
-                        <p className="text-xs text-muted-foreground">{tx.date}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(tx.created_at).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">

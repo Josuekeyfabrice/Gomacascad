@@ -30,25 +30,25 @@ export const LiveChat = ({ sessionId }: LiveChatProps) => {
     useEffect(() => {
         // Charger l'historique des messages
         const loadHistory = async () => {
-            const { data, error } = await supabase
-                .from('live_chat_messages')
+            const { data, error } = await (supabase
+                .from('live_chat_messages' as any)
                 .select(`
                     id,
                     user_id,
                     content,
                     message_type,
                     profiles:user_id(full_name, avatar_url)
-                `)
+                `) as any)
                 .eq('session_id', sessionId)
                 .order('created_at', { ascending: true })
                 .limit(50);
 
             if (!error && data) {
-                const formattedMessages: Message[] = data.map(m => ({
+                const formattedMessages: Message[] = data.map((m: any) => ({
                     id: m.id,
                     user_id: m.user_id,
-                    name: (m.profiles as any)?.full_name || 'Utilisateur',
-                    avatar: (m.profiles as any)?.avatar_url,
+                    name: m.profiles?.full_name || 'Utilisateur',
+                    avatar: m.profiles?.avatar_url,
                     content: m.content,
                     type: m.message_type as any
                 }));
@@ -93,7 +93,7 @@ export const LiveChat = ({ sessionId }: LiveChatProps) => {
         };
 
         // Sauvegarder dans la base de données
-        await supabase.from('live_chat_messages').insert({
+        await (supabase.from('live_chat_messages' as any) as any).insert({
             session_id: sessionId,
             user_id: user.id,
             content: inputValue,
@@ -122,7 +122,7 @@ export const LiveChat = ({ sessionId }: LiveChatProps) => {
         };
 
         // Optionnel: On peut aussi sauvegarder les likes si on veut
-        await supabase.from('live_chat_messages').insert({
+        await (supabase.from('live_chat_messages' as any) as any).insert({
             session_id: sessionId,
             user_id: user.id,
             content: '❤️',
