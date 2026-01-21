@@ -57,6 +57,7 @@ const LiveTV = () => {
   const [isLoadingPremium, setIsLoadingPremium] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [favorites, setFavorites] = useState<number[]>(() => {
+    const saved = localStorage.getItem('iptv_favorites');
     return saved ? JSON.parse(saved) : [];
   });
   const [allPremiumChannels, setAllPremiumChannels] = useState<XtreamStream[]>([]);
@@ -192,41 +193,38 @@ const LiveTV = () => {
     };
     loadPremiumData();
   }, []);
-
   // Charger les chaînes quand une catégorie est sélectionnée
   useEffect(() => {
     const loadChannels = async () => {
       if (activeTab === 'premium') {
-        if (selectedCategory === "all_streams") {
-          // Utiliser les chaînes déjà chargées si on veut tout voir
-          if (allPremiumChannels.length > 0) {
-            setPremiumChannels(allPremiumChannels);
+        setIsLoadingPremium(true);
+        try {
+          if (selectedCategory === "all_streams") {
+            if (allPremiumChannels.length > 0) {
+              setPremiumChannels(allPremiumChannels);
+            } else {
+              const streams = await iptvService.getAllLiveStreams();
+              setPremiumChannels(streams);
+              setAllPremiumChannels(streams);
+            }
           } else {
-            setIsLoadingPremium(true);
-            const streams = await iptvService.getAllLiveStreams();
-            setPremiumChannels(streams);
-            setAllPremiumChannels(streams);
-            setIsLoadingPremium(false);
-          }
-        } else if (selectedCategory !== "all") {
-          setIsLoadingPremium(true);
-          try {
             const streams = await iptvService.getLiveStreams(selectedCategory);
             setPremiumChannels(streams);
-          } catch (err) {
-            toast({
-              title: "Erreur de chargement",
-              description: "Impossible de charger les chaînes.",
-              variant: "destructive"
-            });
-          } finally {
-            setIsLoadingPremium(false);
           }
+        } catch (error) {
+          console.error("Erreur lors du chargement des chaînes:", error);
+          toast({
+            title: "Erreur de connexion",
+            description: "Impossible de charger les chaînes premium. Veuillez réessayer.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoadingPremium(false);
         }
       }
     };
     loadChannels();
-  }, [activeTab, selectedCategory, allPremiumChannels.length]);
+  }, [selectedCategory, activeTab, allPremiumChannels.length]);
 
   const playPremiumChannel = (stream: XtreamStream) => {
     if (isLocked && !hasPass) {

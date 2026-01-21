@@ -87,11 +87,17 @@ const Wallet = () => {
       }
     } catch (error: any) {
       console.error('Error fetching wallet:', error);
+      let errorMessage = "Impossible de charger votre portefeuille";
+      
+      if (error.message?.includes('relation "wallets" does not exist') || error.message?.includes('relation "wallet_transactions" does not exist')) {
+        errorMessage = "Les tables de base de données (wallets) sont manquantes. Veuillez exécuter les migrations Supabase.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
-        title: "Erreur de chargement",
-        description: error.message.includes('relation "wallets" does not exist')
-          ? "Le système de portefeuille n'est pas encore activé en base de données. Contactez l'admin."
-          : "Impossible de charger votre portefeuille",
+        title: "Erreur de base de données",
+        description: errorMessage,
         variant: "destructive"
       });
     }

@@ -91,7 +91,7 @@ export const Hero = () => {
               </Link>
             </Button>
             <Button variant="outline" className="rounded-full gap-2 border-primary/20 hover:bg-primary/5" asChild>
-              <Link to="/verify-seller">
+              <Link to="/verified-sellers">
                 <ShieldCheck className="w-4 h-4 text-primary" />
                 Vendeurs Vérifiés
               </Link>
