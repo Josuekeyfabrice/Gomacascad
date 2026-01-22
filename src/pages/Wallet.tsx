@@ -45,7 +45,11 @@ const Wallet = () => {
 
   useEffect(() => {
     if (user) {
-      fetchWalletData();
+      // Petit délai pour laisser le temps au cache Supabase de se rafraîchir si nécessaire
+      const timer = setTimeout(() => {
+        fetchWalletData();
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [user]);
 
