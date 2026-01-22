@@ -141,7 +141,7 @@ const VerifiedSellersList = () => {
                 Devenez le premier vendeur vérifié de Goma et profitez d'une visibilité accrue !
               </p>
               <Button className="gradient-primary rounded-xl" asChild>
-                <Link to="/verify-seller">Devenir un vendeur vérifié</Link>
+                <Link to="/verify-seller" onClick={() => window.scrollTo(0, 0)}>Devenir un vendeur vérifié</Link>
               </Button>
             </div>
           )}

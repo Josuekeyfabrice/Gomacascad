@@ -53,7 +53,7 @@ const Wallet = () => {
     }
   }, [user]);
 
-  const fetchWalletData = async () => {
+  const fetchWalletData = async (retryCount = 0) => {
     try {
       // Get or create wallet
       let { data: wallet, error: walletError } = await supabase
@@ -91,9 +91,19 @@ const Wallet = () => {
       }
     } catch (error: any) {
       console.error('Error fetching wallet:', error);
-      let errorMessage = "Impossible de charger votre portefeuille";
       
-      if (error.message?.includes('relation "wallets" does not exist') || error.message?.includes('relation "wallet_transactions" does not exist') || error.message?.includes('Could not find the table')) {
+      // Si l'erreur est liée au cache du schéma Supabase, on ne l'affiche pas tout de suite
+      // car le rechargement de la page ou un second essai règle souvent le problème.
+      if (error.message?.includes('Could not find the table') || error.message?.includes('schema cache')) {
+        if (retryCount < 2) {
+          console.warn(`Supabase schema cache issue detected. Retrying (${retryCount + 1})...`);
+          setTimeout(() => fetchWalletData(retryCount + 1), 2000);
+          return;
+        }
+      }
+
+      let errorMessage = "Impossible de charger votre portefeuille";
+      if (error.message?.includes('relation "wallets" does not exist') || error.message?.includes('relation "wallet_transactions" does not exist')) {
         errorMessage = "Les tables de base de données (wallets) sont manquantes. Veuillez exécuter le script SQL de migration dans votre interface Supabase.";
       } else if (error.message) {
         errorMessage = error.message;
