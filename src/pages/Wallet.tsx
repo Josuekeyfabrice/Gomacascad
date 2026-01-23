@@ -56,23 +56,27 @@ const Wallet = () => {
   const fetchWalletData = async (retryCount = 0) => {
     try {
       // Get or create wallet
-      let { data: wallet, error: walletError } = await supabase
-        .from('wallets')
+      // Utilisation d'une approche plus robuste pour éviter les erreurs de cache de schéma
+      const { data: wallets, error: walletError } = await supabase
+        .from('wallets' as any)
         .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
+        .eq('user_id', user?.id);
 
-      if (walletError) throw walletError;
+      if (walletError) {
+        console.error('Wallet fetch error:', walletError);
+        throw walletError;
+      }
+
+      let wallet = wallets && wallets.length > 0 ? wallets[0] : null;
 
       if (!wallet && user) {
-        const { data: newWallet, error: createError } = await supabase
-          .from('wallets')
+        const { data: newWallets, error: createError } = await supabase
+          .from('wallets' as any)
           .insert({ user_id: user.id, balance: 0 })
-          .select()
-          .single();
+          .select();
 
         if (createError) throw createError;
-        wallet = newWallet;
+        wallet = newWallets && newWallets.length > 0 ? newWallets[0] : null;
       }
 
       if (wallet) {
@@ -81,7 +85,7 @@ const Wallet = () => {
 
         // Fetch transactions
         const { data: txData, error: txError } = await supabase
-          .from('wallet_transactions')
+          .from('wallet_transactions' as any)
           .select('*')
           .eq('wallet_id', wallet.id)
           .order('created_at', { ascending: false });
@@ -141,7 +145,7 @@ const Wallet = () => {
 
       // 2. Insert transaction into our DB
       const { error } = await supabase
-        .from('wallet_transactions')
+        .from('wallet_transactions' as any)
         .insert({
           wallet_id: walletId,
           type: 'recharge',
