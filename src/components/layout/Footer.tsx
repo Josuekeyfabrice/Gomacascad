@@ -40,7 +40,7 @@ export const Footer = () => {
               <li><Link to="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
               <li><Link to="/privacy" className="hover:text-primary transition-colors">Confidentialité</Link></li>
               <li><Link to="/terms" className="hover:text-primary transition-colors">Conditions d'utilisation</Link></li>
-              <li><Link to="/sellers" className="hover:text-primary transition-colors font-bold text-primary">Vendeurs Vérifiés</Link></li>
+              <li><Link to="/verify-seller" className="hover:text-primary transition-colors font-bold text-primary">Vendeurs Vérifiés</Link></li>
             </ul>
           </div>
 

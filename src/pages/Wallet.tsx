@@ -103,8 +103,8 @@ const Wallet = () => {
       }
 
       let errorMessage = "Impossible de charger votre portefeuille";
-      if (error.message?.includes('relation "wallets" does not exist') || error.message?.includes('relation "wallet_transactions" does not exist')) {
-        errorMessage = "Les tables de base de données (wallets) sont manquantes. Veuillez exécuter le script SQL de migration dans votre interface Supabase.";
+      if (error.message?.includes('relation "wallets" does not exist') || error.message?.includes('relation "wallet_transactions" does not exist') || error.message?.includes('public.wallets')) {
+        errorMessage = "La table 'wallets' est manquante dans votre base de données Supabase. Veuillez copier et exécuter le contenu du fichier 'supabase/migrations/20260121_create_wallets.sql' dans l'éditeur SQL de votre tableau de bord Supabase pour créer les tables nécessaires.";
       } else if (error.message) {
         errorMessage = error.message;
       }
