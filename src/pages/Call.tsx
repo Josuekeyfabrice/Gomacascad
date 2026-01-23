@@ -123,9 +123,20 @@ const Call = () => {
         console.log('Received offer, current signaling state:', pc.signalingState);
 
         if (pc.signalingState !== 'stable') {
-          console.log('Not in stable state, queuing offer');
-          pendingOfferRef.current = message.payload as RTCSessionDescriptionInit;
-          return;
+          console.log('Not in stable state, checking if we should rollback or ignore');
+          if (pc.signalingState === 'have-local-offer') {
+             // Collision case: usually initiator wins, but here we can try to rollback if we are the receiver
+             if (incomingCallId) {
+               console.log('Rolling back local offer to accept incoming offer');
+               await pc.setLocalDescription({type: 'rollback'});
+             } else {
+               console.log('Ignoring incoming offer as we already sent one');
+               return;
+             }
+          } else {
+            pendingOfferRef.current = message.payload as RTCSessionDescriptionInit;
+            return;
+          }
         }
 
         await pc.setRemoteDescription(new RTCSessionDescription(message.payload as RTCSessionDescriptionInit));
@@ -461,7 +472,14 @@ const Call = () => {
 
         if (callData) {
           setCall(callData as CallType);
-          setCallStatus('ringing');
+          
+          // If we are joining an already accepted call, go straight to connecting
+          if (callData.status === 'accepted') {
+            setCallStatus('connecting');
+            await initWebRTC(false, callData.id);
+          } else {
+            setCallStatus('ringing');
+          }
         }
       } else {
         const { data: callData, error } = await supabase
