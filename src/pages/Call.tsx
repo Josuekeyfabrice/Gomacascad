@@ -559,6 +559,11 @@ const Call = () => {
           console.log('Signaling connected successfully');
         } catch (err) {
           console.error('Signaling connection error:', err);
+          toast({
+            title: "Erreur de signalisation",
+            description: "Impossible de se connecter au serveur de signalisation. Veuillez vérifier votre connexion internet.",
+            variant: "destructive"
+          });
         }
       }
     };

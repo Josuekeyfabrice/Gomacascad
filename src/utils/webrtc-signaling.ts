@@ -49,12 +49,13 @@ export class WebRTCSignaling {
             this.onMessage(message);
           }
         })
-        .subscribe((status) => {
-          console.log('Signaling channel status:', status);
+        .subscribe((status, err) => {
+          console.log('Signaling channel status:', status, err);
           if (status === 'SUBSCRIBED') {
             resolve();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            reject(new Error(`Failed to subscribe to signaling channel: ${status}`));
+            const errorMsg = err?.message || `Failed to subscribe to signaling channel: ${status}`;
+            reject(new Error(errorMsg));
           }
         });
     });

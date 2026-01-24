@@ -125,7 +125,12 @@ export const useCallSignaling = ({
           setCall(updatedCall);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime channel error for call signaling');
+          setError(new Error('Impossible de se connecter au serveur de signalisation'));
+        }
+      });
 
     channelRef.current = channel;
 
