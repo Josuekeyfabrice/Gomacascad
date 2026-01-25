@@ -103,7 +103,7 @@ export const useIncomingCalls = (userId: string | null): UseIncomingCallsReturn 
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [userId, incomingCall?.id]);
+  }, [userId]);
 
   const acceptCall = useCallback(async () => {
     if (!incomingCall) {
